@@ -1,0 +1,4 @@
+.fallback { max-width: 600px; margin: 12vh auto; padding: 28px; background: var(--surface-strong); border: 1px solid white; border-radius: var(--radius); }
+.fallback h1 { font-size: 30px; }
+.fallback p { color: var(--muted); }
+.fallback button { border: 0; border-radius: 12px; background: #30313f; color: white; padding: 12px 18px; }

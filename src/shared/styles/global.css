@@ -1,0 +1,36 @@
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+body { margin: 0; min-width: 320px; isolation: isolate; color: var(--ink); background: var(--canvas); }
+body::before {
+  content: ''; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at 18% 25%, #b8a5ff42, transparent 45%), radial-gradient(ellipse at 85% 20%, #9ae9ff45, transparent 45%), radial-gradient(ellipse at 65% 80%, #f7a8e82b, transparent 50%);
+  animation: ambient-drift 18s ease-in-out infinite alternate;
+}
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; min-height: 44px; }
+button:disabled { cursor: default; opacity: .5; }
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+::selection { background: #dfd5ff; }
+h1, h2, h3, p { margin-top: 0; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.04em; }
+h1 { font-size: clamp(29px, 3.5vw, 43px); margin-bottom: 13px; font-weight: 600; }
+h2 { font-size: clamp(23px, 2.4vw, 30px); font-weight: 600; margin-bottom: 0; }
+h3 { font-size: 15px; font-weight: 600; margin-bottom: 0; }
+em { color: var(--accent-ink); font-style: normal; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@keyframes ambient-drift {
+  from { transform: translate(-2%, -1%) rotate(-3deg); }
+  to { transform: translate(3%, 3%) rotate(5deg) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  body::before { animation: none; }
+}
+
+/* Component layout must not override native hidden state. */
+[hidden] { display: none; }
+
+/* Dynamic product and table text must remain readable on narrow screens. */
+h1, h2, h3, p { overflow-wrap: anywhere; }

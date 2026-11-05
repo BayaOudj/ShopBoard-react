@@ -1,0 +1,6 @@
+.dialog { position: fixed; color: var(--ink); border: 1px solid white; border-radius: 28px; background: var(--surface-strong); box-shadow: 0 28px 100px #39304d30; backdrop-filter: blur(20px); width: min(870px, calc(100% - 24px)); max-height: 90dvh; padding: 0; overscroll-behavior: contain; }
+.dialog[open] { animation: enter .3s both; }
+.dialog::backdrop { background: #33304450; backdrop-filter: blur(7px); }
+.compact { width: min(560px, calc(100% - 24px)); max-height: 88dvh; }
+@keyframes enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .dialog[open] { animation: none; } }

@@ -1,0 +1,6 @@
+.panel { min-height: 180px; padding: 28px; background: var(--surface); border: 1px solid var(--glass-border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.panel h3 { width: fit-content; font-size: 19px; }
+.panel p { max-width: 600px; color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+.action { margin-top: 20px; padding: 12px 18px; border: 1px solid #30313f; border-radius: 12px; background: #30313f; color: white; font-size: 12px; transition: background .25s; }
+.action:hover { background: #4b405f; }
+@media (prefers-reduced-motion: reduce) { .action { transition: none; } }

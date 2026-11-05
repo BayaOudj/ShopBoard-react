@@ -1,0 +1,28 @@
+.header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #ffffffc9; background: #f7f8fcba; backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 5; }
+.location { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.workspaceLabel { display: none; }
+.separator { margin: 0 10px; color: #a3a6b6; }
+.location strong { font-weight: 500; color: var(--ink); }
+.actions { display: flex; align-items: center; gap: 9px; }
+.search { display: none; }
+.notification, .cart { border: 1px solid #fff; border-radius: 12px; background: #ffffffb8; padding: 8px 12px; font-size: 12px; position: relative; }
+.notification { font-size: 23px; width: 44px; padding: 0; }
+.dot { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #8e70c8; top: 10px; right: 10px; }
+.cart { white-space: nowrap; }
+.cart span { margin-left: 6px; background: #eee8fa; padding: 2px 6px; border-radius: 6px; font-size: 10px; }
+.avatar { width: 35px; height: 35px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; border: 2px solid #fff; background: linear-gradient(135deg, #d2c5fb, #f3d9df, #cfe9ea); color: #574469; }
+.notices { width: min(340px, calc(100% - 24px)); padding: 25px; color: var(--ink); border: 1px solid white; border-radius: 28px; background: var(--surface-strong); box-shadow: 0 28px 100px #39304d30; backdrop-filter: blur(20px); }
+.notices h2 { font-size: 23px; margin-bottom: 15px; }
+.notices p { font-size: 12px; }
+.muted { color: var(--muted); }
+.dismiss { border: 0; background: transparent; text-decoration: underline; text-underline-offset: 4px; font-size: 11px; color: #654b8e; }
+@media (min-width: 540px) {
+  .header { padding: 16px 28px; }
+  .workspaceLabel { display: inline; }
+  .search { display: flex; align-items: center; gap: 10px; font-size: 10px; color: var(--muted); margin-right: 8px; }
+  .search > span { font-size: 22px; }
+}
+@media (min-width: 1100px) { .header { padding: 18px 38px; } }
+@supports not (backdrop-filter: blur(1px)) { .header { background: #f9f9fd; } }
+
+.search kbd { font: inherit; border: 1px solid #dfe0e9; border-radius: 4px; padding: 0 5px; }
