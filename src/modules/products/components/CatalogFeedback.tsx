@@ -9,12 +9,22 @@ interface CatalogFeedbackProps {
   onClearFilters?: () => void
 }
 
-export function CatalogFeedback({ state, onRetry, visibleCount, onClearFilters }: CatalogFeedbackProps) {
+export function CatalogFeedback({
+  state,
+  onRetry,
+  visibleCount,
+  onClearFilters,
+}: CatalogFeedbackProps) {
   const heading = useRef<HTMLHeadingElement>(null)
   let title: string
   let message: string
-  const empty = state.status === 'empty' || state.status === 'success' && state.products.length === 0
-  const noMatches = state.status === 'success' && state.products.length > 0 && visibleCount === 0
+  const empty =
+    state.status === 'empty' ||
+    (state.status === 'success' && state.products.length === 0)
+  const noMatches =
+    state.status === 'success' &&
+    state.products.length > 0 &&
+    visibleCount === 0
 
   if (state.status === 'loading') {
     title = 'Loading products…'
@@ -37,16 +47,33 @@ export function CatalogFeedback({ state, onRetry, visibleCount, onClearFilters }
   return (
     <div className={styles.panel}>
       <div role="status" aria-live="polite" aria-atomic="true">
-        <h3 ref={heading} tabIndex={-1}>{title}</h3>
+        <h3 ref={heading} tabIndex={-1}>
+          {title}
+        </h3>
         <p>{message}</p>
       </div>
       {state.status === 'error' && (
-        <button id="retry-products" className={styles.action} type="button" onClick={() => {
-          heading.current?.focus({ preventScroll: true })
-          onRetry()
-        }}>Try again</button>
+        <button
+          id="retry-products"
+          className={styles.action}
+          type="button"
+          onClick={() => {
+            heading.current?.focus({ preventScroll: true })
+            onRetry()
+          }}
+        >
+          Try again
+        </button>
       )}
-      {noMatches && onClearFilters && <button className={styles.action} type="button" onClick={onClearFilters}>Clear filters</button>}
+      {noMatches && onClearFilters && (
+        <button
+          className={styles.action}
+          type="button"
+          onClick={onClearFilters}
+        >
+          Clear filters
+        </button>
+      )}
     </div>
   )
 }

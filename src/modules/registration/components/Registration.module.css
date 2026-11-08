@@ -1,18 +1,116 @@
-.register { padding: 28px; margin: 30px 0 40px; display: grid; gap: 28px; border-radius: 30px; border: 1px solid white; background: radial-gradient(ellipse at 5% 0%, #b8a5ff60, transparent 60%), radial-gradient(ellipse at 90% 100%, #9ae9ff55, transparent 65%), #ffffff80; overflow: hidden; }
-.eyebrow { font-size: 9px; letter-spacing: 2px; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
-.register h2 { font-size: 35px; }
-.register > div > p:not(.eyebrow) { font-size: 12px; max-width: 340px; color: var(--muted); margin: 18px 0; }
-.flower { display: block; width: fit-content; font-size: 80px; line-height: 1; color: #a48cc7; margin-top: 25px; animation: bloom 24s linear infinite; }
-.form { min-width: 0; background: #ffffffbd; border: 1px solid white; border-radius: 22px; padding: 24px; display: flex; flex-direction: column; }
-.form h3 { margin-bottom: 24px; font-size: 16px; }
-.form label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 8px; }
-.form input:not([type=checkbox]) { width: 100%; min-width: 0; border: 1px solid #d9dce6; background: #ffffffd9; border-radius: 11px; padding: 12px 14px; font-size: 16px; margin-bottom: 16px; }
-.form input[type=password] { margin-bottom: 7px; }
-.form small, .form > p { color: var(--muted); font-size: 10px; line-height: 1.7; }
-.form > p { margin: 12px 0 0; }
-.form .checkbox { display: flex; align-items: start; gap: 10px; font-size: 10px; margin: 20px 0; }
-.checkbox input { accent-color: #73539e; width: 17px; height: 17px; flex-shrink: 0; margin: 0; }
-@keyframes bloom { to { transform: rotate(360deg); } }
-@media (min-width: 760px) { .register { grid-template-columns: 1fr 1fr; align-items: center; padding: 35px; gap: 35px; } }
-@media (min-width: 1100px) { .register { padding: 40px; gap: 50px; } }
-@media (prefers-reduced-motion: reduce) { .flower { animation: none; } }
+.register {
+  padding: 28px;
+  margin: 30px 0 40px;
+  display: grid;
+  gap: 28px;
+  border-radius: 30px;
+  border: 1px solid white;
+  background:
+    radial-gradient(ellipse at 5% 0%, #b8a5ff60, transparent 60%),
+    radial-gradient(ellipse at 90% 100%, #9ae9ff55, transparent 65%), #ffffff80;
+  overflow: hidden;
+}
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.register h2 {
+  font-size: 35px;
+}
+.register > div > p:not(.eyebrow) {
+  font-size: 12px;
+  max-width: 340px;
+  color: var(--muted);
+  margin: 18px 0;
+}
+.flower {
+  display: block;
+  width: fit-content;
+  font-size: 80px;
+  line-height: 1;
+  color: #a48cc7;
+  margin-top: 25px;
+  animation: bloom 24s linear infinite;
+}
+.form {
+  min-width: 0;
+  background: #ffffffbd;
+  border: 1px solid white;
+  border-radius: 22px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+.form h3 {
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+.form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.form input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d9dce6;
+  background: #ffffffd9;
+  border-radius: 11px;
+  padding: 12px 14px;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+.form input[type='password'] {
+  margin-bottom: 7px;
+}
+.form small,
+.form > p {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.form > p {
+  margin: 12px 0 0;
+}
+.form .checkbox {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  font-size: 10px;
+  margin: 20px 0;
+}
+.checkbox input {
+  accent-color: #73539e;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin: 0;
+}
+@keyframes bloom {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (min-width: 760px) {
+  .register {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 35px;
+    gap: 35px;
+  }
+}
+@media (min-width: 1100px) {
+  .register {
+    padding: 40px;
+    gap: 50px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flower {
+    animation: none;
+  }
+}

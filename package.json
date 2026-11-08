@@ -6,17 +6,29 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build",
-    "test:browser": "node scripts/verify-browser.mjs"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build",
+    "test:browser": "node scripts/verify-browser.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "git config core.hooksPath .githooks",
+    "test:hooks": "node scripts/verify-hooks.mjs",
+    "test:states": "node scripts/verify-api-states.mjs"
   },
   "dependencies": {
+    "@hookform/resolvers": "^7.0.3",
+    "@radix-ui/react-label": "^2.1.17",
+    "@radix-ui/react-slot": "^1.5.0",
+    "class-variance-authority": "^0.7.1",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-hook-form": "^7.91.0",
+    "react-router-dom": "^7.18.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
@@ -29,6 +41,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^31.0.0",
     "oxlint": "^1.89.0",
+    "prettier": "^3.9.10",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.1.0"

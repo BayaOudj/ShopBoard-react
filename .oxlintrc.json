@@ -1,10 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "react",
-    "typescript",
-    "oxc"
-  ],
+  "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": [
@@ -15,9 +11,5 @@
     ],
     "react/exhaustive-deps": "error"
   },
-  "ignorePatterns": [
-    "dist/**",
-    "coverage/**",
-    ".vitest/**"
-  ]
+  "ignorePatterns": ["dist/**", "coverage/**", ".vitest/**"]
 }

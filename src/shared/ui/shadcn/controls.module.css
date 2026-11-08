@@ -1,0 +1,39 @@
+.input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #aaa8bb;
+  border-radius: 8px;
+  background: white;
+  color: #252035;
+  margin-top: 6px;
+}
+.input:focus-visible,
+.button:focus-visible {
+  outline: 3px solid #7254b8;
+  outline-offset: 3px;
+}
+.input[aria-invalid='true'] {
+  border-color: #ad243d;
+}
+.button {
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font: inherit;
+}
+.primary {
+  background: #513b83;
+  color: white;
+  border: 1px solid #513b83;
+}
+.outline {
+  border: 1px solid #aaa8bb;
+  background: white;
+}
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

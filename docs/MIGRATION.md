@@ -91,25 +91,25 @@ Preserve current anchors (#hero, #products, #collections, #catalog-insights,
 
 ## Reuse versus rewrite
 
-| Original | React target and treatment |
-| --- | --- |
-| shared/api/client.ts | Reuse HTTP behavior, add AbortSignal support through its existing options and explicit decoding/error handling. |
-| products.api.ts | Reuse response validation and duplicate-ID checks in the feature API. |
-| products.logic.ts / types | Reuse pure functions and types under products/model. |
-| collections / colors | Reuse domain values, IDs, variant keys, and swatches unchanged. |
-| products.images.ts | Reuse path/alt helpers; replace the module Map and DOM image updates with React-owned selected-color state. |
-| products.load.ts | Replace callbacks into imperative render functions with an abortable React loading hook, stale-result protection, and retry. |
-| products.ui.ts | Replace createElement/listeners with JSX and controlled filter/view state. |
-| products.controls/details.ts | React purchase controls and detail dialog with shared selected-color owner. Use useId for independent radio groups. |
-| cart.logic.ts / types | Reuse pure calculations and contracts. |
-| cart.state.ts | Extract pure decoding/migration + guarded storage access. Replace mutable module state with reducer/context and a restoration guard. |
-| cart.ui.ts | React dialog/rows/review. Compose purchase actions through app callbacks rather than UI-module circular dependencies. |
-| dashboard.ui.ts | Separate pure statistics from JSX charts/table. App hook owns active-section observation and search shortcut. |
-| registration.ui.ts | React form with the same native validation/demo semantics. |
-| shared/ui/toast.ts | React toast provider with one announcement region and timer cleanup. |
-| index.html | Move visible app markup into components; keep root, metadata, and entry script. |
-| shared/ui/styles.css | Extract global tokens/reset and component CSS Modules; maintain animations and breakpoints. |
-| existing Node tests | Port assertions to Vitest beside relevant model/API files; add React behavior tests for stateful UI. |
+| Original                     | React target and treatment                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| shared/api/client.ts         | Reuse HTTP behavior, add AbortSignal support through its existing options and explicit decoding/error handling.                      |
+| products.api.ts              | Reuse response validation and duplicate-ID checks in the feature API.                                                                |
+| products.logic.ts / types    | Reuse pure functions and types under products/model.                                                                                 |
+| collections / colors         | Reuse domain values, IDs, variant keys, and swatches unchanged.                                                                      |
+| products.images.ts           | Reuse path/alt helpers; replace the module Map and DOM image updates with React-owned selected-color state.                          |
+| products.load.ts             | Replace callbacks into imperative render functions with an abortable React loading hook, stale-result protection, and retry.         |
+| products.ui.ts               | Replace createElement/listeners with JSX and controlled filter/view state.                                                           |
+| products.controls/details.ts | React purchase controls and detail dialog with shared selected-color owner. Use useId for independent radio groups.                  |
+| cart.logic.ts / types        | Reuse pure calculations and contracts.                                                                                               |
+| cart.state.ts                | Extract pure decoding/migration + guarded storage access. Replace mutable module state with reducer/context and a restoration guard. |
+| cart.ui.ts                   | React dialog/rows/review. Compose purchase actions through app callbacks rather than UI-module circular dependencies.                |
+| dashboard.ui.ts              | Separate pure statistics from JSX charts/table. App hook owns active-section observation and search shortcut.                        |
+| registration.ui.ts           | React form with the same native validation/demo semantics.                                                                           |
+| shared/ui/toast.ts           | React toast provider with one announcement region and timer cleanup.                                                                 |
+| index.html                   | Move visible app markup into components; keep root, metadata, and entry script.                                                      |
+| shared/ui/styles.css         | Extract global tokens/reset and component CSS Modules; maintain animations and breakpoints.                                          |
+| existing Node tests          | Port assertions to Vitest beside relevant model/API files; add React behavior tests for stateful UI.                                 |
 
 ## State ownership
 
@@ -361,3 +361,13 @@ Remaining product limitations match the original demo: static JSON catalog,
 unverified stock, no real account creation, no payments, and no order placement.
 Browser localStorage belongs to its origin; compatible cart format does not copy
 saved data between different development ports automatically.
+
+## Multi-page extension (2026-11-08)
+
+The user's subsequent requirements replace the original single-page navigation
+and modal-only shopping flows. The app now uses React Router with lazy route
+modules, Context for the sole cart/catalog/color owner, scoped Suspense/error
+boundaries, product-by-ID static API assets, and a react-hook-form/Zod/shadcn/ui
+demo checkout. Product IDs, catalog, images, filters, pricing, registration,
+analytics, cart storage compatibility, and the original source are preserved.
+See README.md for the current routes, component tree, ownership, and host rules.

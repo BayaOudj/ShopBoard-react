@@ -21,7 +21,6 @@ export interface ProductImage {
   alt: string
 }
 
-
 export type ProductSort = 'cheapest' | 'expensive' | 'original'
 
 export interface ProductFilters {

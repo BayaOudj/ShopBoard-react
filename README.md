@@ -1,124 +1,201 @@
-# Shopboard React
+# ShopBoard React
 
-Completed React migration of the Shopboard demo. The original reference application
-at /Users/mac/CodeHub/shopboard is unchanged. Read AGENTS.md for coding rules and
-[docs/MIGRATION.md](docs/MIGRATION.md) for the migration history and parity checklist.
+A multi-page Vite, React, and strict TypeScript demo shop with a static catalog,
+persistent cart, and validated demo checkout.
 
-## Run locally
+## Setup
 
-Use the Node version pinned in .nvmrc. Install with npm ci, then run:
+Use the Node LTS version in `.nvmrc`, then:
 
 ```sh
-npm run dev -- --port 5180 --strictPort
+npm ci
+npm run dev -- --port 5173
 ```
 
-Open http://localhost:5180/. The original site can continue running on its own port.
+Open http://localhost:5173. Optional public API configuration is in `.env.example`.
+The default is the bundled same-origin static demo API. An external API must
+support both the catalog and single-product contracts below. Never add secrets
+to `VITE_*` variables.
 
-## Implemented behavior
+## Routes
 
-- Responsive liquid-glass shell, sidebar/mobile navigation, active breadcrumbs,
-  person avatars, notifications popover, search shortcut, and reduced motion.
-- Original 15-product catalog, three collections, 45 images, combined filtering,
-  search, price sorting, names-only view, summaries, and both empty messages.
-- Native accessible detail/cart dialogs, synchronized color previews, separate
-  cart variants, quantities 1–99, removal, subtotal, order review, and toasts.
-- Compatible shopboard-cart-v1 storage with legacy migration, validation, guarded
-  persistence, and an in-memory fallback when storage is unavailable.
-- Catalog metrics, price/category charts, an accessible chart-data table, and
-  product-table links to details.
-- Community registration with original browser validation and local demo feedback.
+All pages share the sidebar, header, cart access, footer, and skip link. Page
+modules are imported only when opened using `React.lazy`; React Router preserves
+URLs and browser back/forward navigation.
 
-Product data remains static JSON served over HTTP. Registration creates no account;
-order review places no order, and payments/live inventory are not connected.
-Browser storage is isolated by origin: changing the development port does not
-transfer a cart automatically. The compatible key/format supports replacing the
-original app on the same production origin without inventing a new storage format.
+| URL                                  | Page                                                                  |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `/`                                  | Overview, catalog metrics                                             |
+| `/products`                          | Search, combined filters, sort, names-only view, variant controls     |
+| `/products?collection=slow-mornings` | Catalog scoped to a collection; collection links supply the actual ID |
+| `/products/:id`                      | One product fetched by its encoded ID, or product-not-found feedback  |
+| `/collections`                       | Three collection links                                                |
+| `/insights`                          | Category charts, accessible chart data, product table                 |
+| `/community`                         | Local demo registration                                               |
+| `/cart`                              | Quantities, variant lines, removal, subtotal, checkout link           |
+| `/checkout`                          | Validated delivery form and local demo confirmation                   |
+| any unmatched URL                    | 404 within the shared layout                                          |
 
-## Architecture
+## Component tree and ownership
 
 ```text
-src/
-  app/                      # composition, shell, navigation/search hooks
-  modules/
-    products/               # api, model, hooks, components
-    cart/                   # model/reducer/persistence, hook, components
-    dashboard/              # pure statistics and chart/table components
-    registration/           # registration component
-  shared/
-    api/client.ts           # the only application fetch call
-    config/env.ts           # public API base configuration
-    lib/                    # shared formatting
-    ui/                     # buttons, native dialogs, image fallback, toasts
-    styles/                 # design tokens and global typography/reset
-  test/setup.ts
-public/
-  api/products.json
-  images/products/
-scripts/verify-browser.mjs
+StrictMode
+└─ AppErrorBoundary
+   └─ App → RouterProvider
+      └─ ShopLayout
+         └─ ShopProvider (Context)
+            ├─ Shell
+            │  ├─ Brand + route navigation
+            │  ├─ Header (cart count, search, notifications)
+            │  ├─ main → SectionBoundary → Suspense → Outlet
+            │  │  ├─ OverviewPage → Hero + SectionBoundary → DashboardOverview
+            │  │  ├─ ProductsPage → CatalogSection → ProductCard → PurchaseControls
+            │  │  ├─ ProductPage → PurchaseControls
+            │  │  ├─ CollectionsPage → CollectionsSection
+            │  │  ├─ InsightsPage → CatalogInsights
+            │  │  ├─ CommunityPage → RegistrationSection
+            │  │  ├─ CartPage
+            │  │  ├─ CheckoutPage → react-hook-form + Zod + shadcn/ui controls
+            │  │  └─ NotFoundPage
+            │  └─ Footer
+            └─ Toast
 ```
 
-The app owns one catalog-loading hook, one cart hook/reducer, and one color-selection
-mapping. Features receive data/actions through application composition. Components
-use CSS Modules. The HTTP client returns unknown; the product API validates it.
-Aborted or stale requests cannot overwrite the latest catalog state. Cart storage
-is not written until a valid nonempty catalog is available.
+Context is sufficient for this focused shared state: one provider owns the cart
+reducer, catalog resource, and selected colors across routes. A second state
+library would add no required capability. Consumers use `useShop()` actions;
+no intermediate components forward shared state. The cart's `useCart` hook and
+products' `useShop` hook are the explicit cross-feature interfaces.
 
-Leave VITE_API_BASE_URL empty for the bundled same-origin catalog. See .env.example
-for public configuration. Only override it for a backend implementing the same
-endpoint/response contract; cross-origin servers require appropriate CORS. Restart
-Vite after changing local env files. Never put secrets in VITE_* variables.
+The catalog resource owns one validated result and its stable promise.
+`useSyncExternalStore` subscribes the cart to that result without an effect that
+copies API data into React state. Pages read the same promise with React `use`.
+Request work starts in route loaders or retry handlers. The detail loader requests
+its own single-product resource and passes the router's cancellation signal.
+Retired catalog resources have no subscribers, so late responses cannot replace
+the current catalog. There is no render-triggered fetching.
 
-## Automated checks
+Cart count, line items, subtotals, filtered products, and metrics are derived.
+Filters/view controls belong to the catalog page. Checkout fields and confirmation
+belong to checkout. Effects remain for external work such as guarded persistence,
+keyboard listeners, toast timers, and focus management.
+
+## Loading, errors, persistence
+
+Each route has a Suspense fallback and retryable Error Boundary; the overview also
+isolates its metrics, leaving the hero and navigation available during slow or
+failed requests. Retry creates a new catalog resource and revalidates the product
+loader. A separate reload action recovers failed JavaScript chunks or unexpected
+application failures. Empty catalogs, no search matches, empty carts, unknown
+products, and unknown routes have distinct feedback.
+
+The cart retains `shopboard-cart-v1`, `id::color` entries, legacy migration, and
+integer quantities 1–99. Restoration precedes persistence. Failed/empty catalog
+loads do not erase saved carts; unavailable storage falls back to memory. Browser
+storage belongs to its origin, so different development ports have separate carts.
+
+## Checkout and shadcn/ui
+
+`checkout.schema.ts` is the single source of field validation. react-hook-form uses
+`zodResolver`, validates on blur/submission, associates errors with inputs, focuses
+the first invalid field, and prevents duplicate submissions while pending.
+International city/country and postal code formats are allowed. Completion focuses
+the confirmation and preserves the cart.
+
+The local shadcn/ui Input, Radix Label, and Slot/CVA Button source is adapted to
+CSS Modules and the existing visual design, following the
+[shadcn/ui form integration](https://ui.shadcn.com/docs/forms/react-hook-form).
+These source-owned controls live in `src/shared/ui/shadcn/`; they need no second
+styling framework. See the adjacent license.
+
+No personal checkout information is sent or persisted. This demo has no payment,
+order, authentication, stock, shipping, or tax backend. Registration creates no
+account. Cart prices remain demo catalog prices.
+
+## Static API and hosting
+
+`GET /api/products.json` returns the canonical 15-product catalog.
+`GET /api/products/:id.json` returns one product. The small Vite plugin in
+`scripts/product-api.ts` serves single-product JSON during development and emits
+15 JSON assets during production builds, generated from the canonical catalog.
+Do not edit generated `dist/` assets. `src/shared/api/client.ts` is the only app
+file that calls fetch; product API boundaries validate responses and IDs.
+
+For production, serve `dist/` and rewrite application paths such as `/checkout`
+and `/products/1` to `/index.html`. Serve `/api/*` and `/assets/*` as static files
+**before** that fallback; missing API/assets must return HTTP 404, never HTML.
+Vite preview supports SPA deep links. Arbitrary external hosts need the same rules.
+The browser check verifies direct URLs, refreshes, and a missing product.
+
+## Verification
 
 ```sh
-npm run check
-```
-
-This runs strict typecheck, Oxlint, all Vitest/React Testing Library tests, and the
-production build. The application and tests use separate TypeScript configurations
-so Node-based fixture/asset checks do not expose Node globals to browser code.
-
-Other commands: npm test, npm run test:watch, npm run lint, npm run typecheck,
-npm run build, and npm run preview.
-
-## Repeatable production-browser verification
-
-Start the production server in one terminal:
-
-```sh
+npm run typecheck
+npm run lint        # warnings fail too
+npm run format:check
+npm run format      # apply the shared formatting rules
+npm test
 npm run build
-npm run preview -- --port 5181 --strictPort
+npm run check       # typecheck, lint, format, tests, build; fail on any error
+npm run test:watch
+npm run preview -- --port 5181
 ```
 
-Launch a SEPARATE headless Chromium profile with remote debugging in another terminal.
-For Chrome on macOS, for example:
+Vitest/Testing Library cover domain logic, API validation, cancellation, retries,
+cart migration/storage failures, filters, cross-page variants/cart, checkout
+validation and completion, loading isolation, and the 404 page. Lazy route tests
+allow five seconds for dynamic imports on slower parallel test workers.
+
+For browser checks, launch Chrome with a dedicated temporary profile and debugging
+port, then point the script at a running dev server or production preview:
 
 ```sh
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-first-run --remote-debugging-port=9223 --user-data-dir=/private/tmp/shopboard-react-test-browser about:blank
+APP_URL=http://localhost:5181/ BROWSER_DEBUG_URL=http://127.0.0.1:9224 npm run test:browser
 ```
 
-Use an isolated test profile, not your normal signed-in browser. If the port is
-already in use, reuse the isolated test instance or choose a different debug port.
-Then, from this project in a third terminal:
+The script preserves the profile's prior cart, checks lazy loading, shopping,
+refresh restoration, checkout accessibility/completion, 375/768/1024/1440px
+layouts, missing routes/products, delayed requests, retry, and runtime errors.
+Its screenshot is written to the operating system temporary directory. Use a
+dedicated test profile; never attach it to a real shopping session.
 
-```sh
-npm run test:browser
+Migration history: [docs/MIGRATION.md](docs/MIGRATION.md). The new multi-page
+requirements supersede that document's original single-page/anchor-only design.
+
+## Commit checks and API state exercises
+
+`npm ci` activates the tracked `.githooks/pre-commit` through `prepare`.
+For an existing install, run `npm run prepare`. The hook runs `npm run check`:
+a failed typecheck, lint (including warnings), formatting check, test, or build
+stops the commit. `npm run test:hooks` proves each failure and the all-pass path
+in a disposable repository without committing or staging project files. Like
+all local Git hooks, this can be bypassed explicitly with Git's `--no-verify`.
+
+To exercise loading, failure, and empty API states, set **one** value in a local,
+ignored `.env.local`, then restart `npm run dev`:
+
+```dotenv
+VITE_API_BASE_URL=/delay/3000
+# or /fail/500
+# or /empty
 ```
 
-APP_URL defaults to http://localhost:5181/ and BROWSER_DEBUG_URL defaults to
-http://127.0.0.1:9223. Both can be supplied as environment variables. The script
-uses Node's native WebSocket/CDP support; no browser-test package is required.
-It preserves/restores the test profile's prior cart and writes desktop/mobile
-screenshots to the OS temporary directory.
+- `/delay/3000` delays catalog and individual-product responses by three seconds.
+- `/fail/500` returns HTTP 500. Retry makes a new request; it continues to fail
+  until this base URL is cleared. Other independent pages remain usable.
+- `/empty` returns an empty catalog and product-not-found for individual IDs.
 
-The browser checks cover real HTTP loading/errors/retry/empty results, complete
-shopping and persistence flows, native dialog focus/Escape, original quantities
-and variant rules, registration validation, image fallback, long names, four
-viewport sizes, accessible labels, reduced motion, and runtime/React errors.
+Saved carts survive all three modes. Clear `.env.local` or the variable and restart
+to restore the normal API. These controls work in development and Vite preview;
+they are not deployed production API assets. To test a configured production build,
+set the variable when building, then use Vite preview.
 
-## Verification status
+With an isolated Chrome debugging profile running, `npm run test:states` starts
+three temporary Vite servers with the actual environment values and verifies their
+browser states, retry requests, saved-cart safety, and Console warnings. It stops
+the servers afterward. The standard browser test also fails on Console warnings.
+Expected HTTP errors and React's caught-error diagnostics during deliberate
+`/fail/500` tests are distinguished from unintended runtime errors.
 
-All migration phases (0–7) are complete. Strict typecheck, lint without warnings,
-64 automated tests, production build, and the production-browser verification
-passed. The original reference working tree remains clean. Nothing was deployed
-or pushed as part of this migration.
+See [docs/AUDIT.md](docs/AUDIT.md) for the task checklist, available-notes review,
+repository cleanup, and the distinction between local work and published GitHub.

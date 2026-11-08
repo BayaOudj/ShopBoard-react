@@ -9,8 +9,14 @@ function BrokenFeature(): never {
 describe('application error fallback', () => {
   it('provides a recovery action when a descendant cannot render', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    render(<AppErrorBoundary><BrokenFeature /></AppErrorBoundary>)
-    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument()
+    render(
+      <AppErrorBoundary>
+        <BrokenFeature />
+      </AppErrorBoundary>,
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Something went wrong' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reload page' })).toBeEnabled()
   })
 })

@@ -10,6 +10,8 @@ if (!root) throw new Error('The React root element is missing.')
 
 createRoot(root).render(
   <StrictMode>
-    <AppErrorBoundary><App /></AppErrorBoundary>
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 )

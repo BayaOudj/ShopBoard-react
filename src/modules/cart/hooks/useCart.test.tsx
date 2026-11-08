@@ -5,8 +5,12 @@ import type { Product } from '../../products/model/products.types'
 import { useCart } from './useCart'
 import { storageKey } from '../model/cart.persistence'
 
-const products: Product[] = [{ id: 1, name: 'Leather Tote Bag', category: 'Bags', price: 89 }]
-interface Props { catalog: Product[] | null }
+const products: Product[] = [
+  { id: 1, name: 'Leather Tote Bag', category: 'Bags', price: 89 },
+]
+interface Props {
+  catalog: Product[] | null
+}
 beforeEach(() => localStorage.clear())
 
 describe('cart restoration and persistence', () => {
@@ -15,7 +19,10 @@ describe('cart restoration and persistence', () => {
     localStorage.setItem(storageKey, original)
     const write = vi.spyOn(Storage.prototype, 'setItem')
     const initialProps: Props = { catalog: null }
-    const { result, rerender } = renderHook(({ catalog }: Props) => useCart(catalog), { initialProps, wrapper: StrictMode })
+    const { result, rerender } = renderHook(
+      ({ catalog }: Props) => useCart(catalog),
+      { initialProps, wrapper: StrictMode },
+    )
     expect(result.current.ready).toBe(false)
     expect(write).not.toHaveBeenCalled()
     rerender({ catalog: [] })
@@ -23,17 +30,25 @@ describe('cart restoration and persistence', () => {
     expect(write).not.toHaveBeenCalled()
     rerender({ catalog: products })
     expect(result.current.count).toBe(5)
-    await waitFor(() => expect(JSON.parse(localStorage.getItem(storageKey) ?? '{}')).toEqual({ '1::Brown': 5 }))
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem(storageKey) ?? '{}')).toEqual({
+        '1::Brown': 5,
+      }),
+    )
     const writes = write.mock.calls.length
     rerender({ catalog: products })
     expect(write).toHaveBeenCalledTimes(writes)
     rerender({ catalog: null })
-    expect(JSON.parse(localStorage.getItem(storageKey) ?? '{}')).toEqual({ '1::Brown': 5 })
+    expect(JSON.parse(localStorage.getItem(storageKey) ?? '{}')).toEqual({
+      '1::Brown': 5,
+    })
   })
 
   it('does not double-migrate legacy quantities under StrictMode', async () => {
     localStorage.setItem(storageKey, JSON.stringify({ 1: 2, '1::Brown': 3 }))
-    const { result } = renderHook(() => useCart(products), { wrapper: StrictMode })
+    const { result } = renderHook(() => useCart(products), {
+      wrapper: StrictMode,
+    })
     expect(result.current.count).toBe(5)
     act(() => result.current.add(products[0], 'Brown'))
     expect(result.current.count).toBe(6)
@@ -46,7 +61,9 @@ describe('cart restoration and persistence', () => {
 
   it('keeps the cart usable when storage is malformed or unavailable', () => {
     localStorage.setItem(storageKey, '{broken')
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Quota exceeded', 'QuotaExceededError') })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError')
+    })
     const { result } = renderHook(() => useCart(products))
     expect(result.current.count).toBe(0)
     act(() => result.current.add(products[0], 'Black'))
@@ -55,7 +72,9 @@ describe('cart restoration and persistence', () => {
   })
 
   it('handles denied storage reads without crashing', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('Denied', 'SecurityError') })
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Denied', 'SecurityError')
+    })
     const { result } = renderHook(() => useCart(products))
     expect(result.current.ready).toBe(true)
     expect(result.current.count).toBe(0)

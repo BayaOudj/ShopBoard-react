@@ -18,14 +18,24 @@ function resolveApiUrl(path: string | URL): string {
 }
 
 // Transport returns unknown. Feature APIs validate data before exposing domain types.
-export async function fetchJson(path: string | URL, options: RequestInit = {}): Promise<unknown> {
+export async function fetchJson(
+  path: string | URL,
+  options: RequestInit = {},
+): Promise<unknown> {
   const headers = new Headers(options.headers)
   if (!headers.has('Accept')) headers.set('Accept', 'application/json')
   const response = await fetch(resolveApiUrl(path), { ...options, headers })
   if (!response.ok) {
-    throw new ApiError(`Request failed: ${response.status} ${response.statusText}`.trim(), response.status)
+    throw new ApiError(
+      `Request failed: ${response.status} ${response.statusText}`.trim(),
+      response.status,
+    )
   }
-  if (response.status === 204 || response.status === 205 || options.method?.toUpperCase() === 'HEAD') {
+  if (
+    response.status === 204 ||
+    response.status === 205 ||
+    options.method?.toUpperCase() === 'HEAD'
+  ) {
     return undefined
   }
   const body = await response.text()

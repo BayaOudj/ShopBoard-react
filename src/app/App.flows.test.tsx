@@ -1,144 +1,260 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { StrictMode } from 'react'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import App from './App'
-
-const catalog: unknown = JSON.parse(await readFile(resolve(process.cwd(), 'public/api/products.json'), 'utf8'))
+import { renderShop as renderApp } from '../test/renderShop'
+const catalog: unknown = JSON.parse(
+  await readFile(resolve(process.cwd(), 'public/api/products.json'), 'utf8'),
+)
 beforeEach(() => {
   localStorage.clear()
-  window.history.replaceState(null, '', '/')
-  vi.stubEnv('VITE_API_BASE_URL', '')
-  vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockImplementation(async () => Response.json(catalog)))
+  window.history.replaceState(null, '', '/products')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (String(input).includes('/products/1.json') && Array.isArray(catalog))
+        return Response.json(
+          catalog.find(
+            (item: unknown) =>
+              typeof item === 'object' &&
+              item !== null &&
+              'id' in item &&
+              item.id === 1,
+          ),
+        )
+      return Response.json(catalog)
+    }),
+  )
 })
-
 async function start() {
   const user = userEvent.setup()
-  const view = render(<StrictMode><App /></StrictMode>)
+  const view = renderApp()
   await screen.findByRole('article', { name: 'Everyday Tote' })
   return { user, ...view }
 }
-const region = () => screen.getByRole('region', { name: 'Good things, all in one place.' })
-
-describe('migrated shopping flows', () => {
-  it('combines search and category filters and recovers from no matches', async () => {
+const nav = () => screen.getByRole('navigation', { name: 'Main navigation' })
+describe('routed shopping flows', () => {
+  it('combines filters, recovers from no matches, and retains sort/view on reset', async () => {
     const { user } = await start()
-    expect(within(region()).getAllByRole('article')).toHaveLength(15)
-    await user.type(screen.getByRole('searchbox', { name: 'Search products' }), 'tote')
-    expect(within(region()).getAllByRole('article')).toHaveLength(2)
-    await user.click(within(screen.getByRole('group', { name: 'Filter products by category' })).getByRole('button', { name: 'Shoes' }))
-    expect(screen.getByRole('heading', { name: 'No products match these filters' })).toBeInTheDocument()
-    expect(within(region()).queryByRole('article')).not.toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: 'Clear filters' })[0])
-    expect(within(region()).getAllByRole('article')).toHaveLength(15)
-    expect(screen.getByRole('searchbox')).toHaveValue('')
-  })
-
-  it('preserves sorting and names-only view while collection and reset actions clear the correct filters', async () => {
-    const { user } = await start()
-    await user.click(screen.getByRole('checkbox', { name: 'Names only' }))
+    await user.type(screen.getByRole('searchbox'), 'tote')
+    expect(screen.getAllByRole('article')).toHaveLength(2)
+    await user.click(screen.getByLabelText('Names only'))
     await user.selectOptions(screen.getByLabelText('Sort by'), 'expensive')
-    await user.click(screen.getByRole('checkbox', { name: 'Under $50' }))
-    await user.click(screen.getByRole('button', { name: /^Slow Mornings/ }))
-    expect(screen.getByRole('checkbox', { name: 'Under $50' })).not.toBeChecked()
-    expect(screen.getByRole('checkbox', { name: 'Names only' })).toBeChecked()
+    await user.click(
+      within(
+        screen.getByRole('group', { name: 'Filter products by category' }),
+      ).getByRole('button', { name: 'Shoes' }),
+    )
+    expect(
+      screen.getByRole('heading', { name: 'No products match these filters' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('group', { name: 'Collection controls' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Names only')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Under $50')).not.toBeInTheDocument()
+    await user.click(
+      screen.getAllByRole('button', { name: 'Clear filters' })[0],
+    )
+    expect(
+      screen.getByRole('group', { name: 'Collection controls' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    expect(screen.getByLabelText('Names only')).toBeChecked()
     expect(screen.getByLabelText('Sort by')).toHaveValue('expensive')
-    const list = screen.getByRole('list', { name: 'Product names' })
-    expect(within(list).getAllByRole('listitem')).toHaveLength(3)
-    expect(within(list).getAllByRole('button')[0]).toHaveTextContent('Wool Scarf')
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }))
-    expect(within(screen.getByRole('list', { name: 'Product names' })).getAllByRole('listitem')).toHaveLength(15)
-    expect(screen.getByLabelText('Sort by')).toHaveValue('expensive')
-    expect(screen.getByRole('checkbox', { name: 'Names only' })).toBeChecked()
+    expect(
+      within(screen.getByRole('list', { name: 'Product names' })).getAllByRole(
+        'listitem',
+      ),
+    ).toHaveLength(15)
   })
-
-  it('synchronizes card/detail colors and adds the chosen variant to the persisted cart', async () => {
-    const { user } = await start()
+  it('shares colors and cart across product routes, community, and refresh', async () => {
+    const { user, unmount } = await start()
     const card = screen.getByRole('article', { name: 'Leather Tote Bag' })
-    await user.click(within(card).getByRole('radio', { name: 'Black for Leather Tote Bag' }))
-    expect(within(card).getByRole('img')).toHaveAttribute('src', '/images/products/1-black.jpg')
-    const trigger = within(card).getByRole('button', { name: 'Leather Tote Bag' })
-    await user.click(trigger)
-    const dialog = screen.getByRole('dialog', { name: 'Leather Tote Bag' })
-    expect(within(dialog).getByRole('radio', { name: 'Black for Leather Tote Bag' })).toBeChecked()
-    await user.click(within(dialog).getByRole('radio', { name: 'Tan for Leather Tote Bag' }))
-    expect(within(card).getByRole('radio', { name: 'Tan for Leather Tote Bag' })).toBeChecked()
-    expect(within(dialog).getByRole('img')).toHaveAttribute('src', '/images/products/1-tan.jpg')
-    await user.click(within(dialog).getByRole('button', { name: 'Add Leather Tote Bag to cart' }))
-    await user.click(within(dialog).getByRole('button', { name: 'Close product details' }))
-    expect(trigger).toHaveFocus()
-    expect(screen.getByRole('button', { name: 'Cart 1' })).toBeEnabled()
-    await waitFor(() => expect(JSON.parse(localStorage.getItem('shopboard-cart-v1') ?? '{}')).toEqual({ '1::Tan': 1 }))
-  })
-
-  it('updates cart quantity, reviews the order, removes the item, and preserves an empty cart', async () => {
-    const { user } = await start()
-    await user.click(within(screen.getByRole('article', { name: 'Everyday Tote' })).getByRole('button', { name: 'Add Everyday Tote to cart' }))
-    await user.click(screen.getByRole('button', { name: 'Cart 1' }))
-    const cart = screen.getByRole('dialog', { name: 'Your shopping cart' })
-    const quantity = within(cart).getByRole('spinbutton', { name: 'Quantity for Everyday Tote, Sage' })
+    await user.click(
+      within(card).getByRole('radio', { name: 'Black for Leather Tote Bag' }),
+    )
+    await user.click(
+      within(card).getByRole('button', { name: 'Leather Tote Bag' }),
+    )
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Leather Tote Bag',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('radio', { name: 'Black for Leather Tote Bag' }),
+    ).toBeChecked()
+    await user.click(
+      screen.getByRole('button', { name: 'Add Leather Tote Bag to cart' }),
+    )
+    await user.click(within(nav()).getByRole('link', { name: 'Community' }))
+    expect(
+      await screen.findByRole('form', { name: 'Join the ShopBoard community' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cart 1' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        JSON.parse(localStorage.getItem('shopboard-cart-v1') ?? '{}'),
+      ).toEqual({ '1::Black': 1 }),
+    )
+    unmount()
+    window.history.replaceState(null, '', '/cart')
+    renderApp()
+    expect(
+      await screen.findByRole('heading', { name: 'Leather Tote Bag · Black' }),
+    ).toBeInTheDocument()
+    const quantity = screen.getByRole('spinbutton')
     fireEvent.change(quantity, { target: { value: '2' } })
     expect(quantity).toHaveValue(2)
-    expect(within(cart).getByText('$48')).toBeInTheDocument()
     fireEvent.change(quantity, { target: { value: '0' } })
     expect(quantity).toHaveValue(2)
-    await user.click(within(cart).getByRole('button', { name: 'Review order' }))
-    expect(within(cart).getByRole('heading', { name: 'Your order review' })).toHaveFocus()
-    fireEvent.change(quantity, { target: { value: '3' } })
-    expect(within(cart).queryByRole('heading', { name: 'Your order review' })).not.toBeInTheDocument()
-    await user.click(within(cart).getByRole('button', { name: 'Remove Everyday Tote, Sage, from cart' }))
-    expect(within(cart).getByRole('button', { name: 'Review order' })).toBeDisabled()
-    expect(within(cart).getByRole('button', { name: 'Close shopping cart' })).toHaveFocus()
-    await waitFor(() => expect(localStorage.getItem('shopboard-cart-v1')).toBe('{}'))
+    await user.click(
+      screen.getByRole('button', { name: 'Remove Leather Tote Bag, Black' }),
+    )
+    expect(screen.getByText(/Your cart is empty/)).toBeInTheDocument()
   })
-
-  it('restores and migrates saved carts without double counting under StrictMode', async () => {
-    localStorage.setItem('shopboard-cart-v1', JSON.stringify({ 1: 2, '1::Brown': 3, '2::Sage': 1, '1::Purple': 4 }))
-    const { user, unmount } = await start()
-    expect(screen.getByRole('button', { name: 'Cart 6' })).toBeInTheDocument()
-    await user.click(within(screen.getByRole('article', { name: 'Leather Tote Bag' })).getByRole('button', { name: 'Add Leather Tote Bag to cart' }))
-    expect(screen.getByRole('button', { name: 'Cart 7' })).toBeInTheDocument()
-    await waitFor(() => expect(JSON.parse(localStorage.getItem('shopboard-cart-v1') ?? '{}')).toEqual({ '1::Brown': 6, '2::Sage': 1 }))
-    unmount()
-    await start()
-    expect(screen.getByRole('button', { name: 'Cart 7' })).toBeInTheDocument()
-  })
-
-  it('enforces the maximum quantity and handles missing product photos', async () => {
-    localStorage.setItem('shopboard-cart-v1', JSON.stringify({ '1::Brown': 99 }))
+  it('migrates legacy storage once and respects the quantity limit', async () => {
+    localStorage.setItem(
+      'shopboard-cart-v1',
+      JSON.stringify({ 1: 2, '1::Brown': 97, '1::Purple': 9 }),
+    )
     const { user } = await start()
-    const card = screen.getByRole('article', { name: 'Leather Tote Bag' })
-    await user.click(within(card).getByRole('button', { name: 'Add Leather Tote Bag to cart' }))
     expect(screen.getByRole('button', { name: 'Cart 99' })).toBeInTheDocument()
-    expect(screen.getByText('Maximum quantity is 99 per product.')).toBeInTheDocument()
-    fireEvent.error(within(card).getByRole('img'))
-    expect(within(card).getByText('Photo unavailable')).toBeInTheDocument()
+    await user.click(
+      within(
+        screen.getByRole('article', { name: 'Leather Tote Bag' }),
+      ).getByRole('button', { name: 'Add Leather Tote Bag to cart' }),
+    )
+    expect(
+      screen.getByText('Maximum quantity is 99 per product.'),
+    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        JSON.parse(localStorage.getItem('shopboard-cart-v1') ?? '{}'),
+      ).toEqual({ '1::Brown': 99 }),
+    )
   })
-
-  it('renders real catalog analytics and opens product details from the table', async () => {
-    const { user } = await start()
-    expect(document.getElementById('overview-value')).toHaveTextContent('$931')
-    expect(screen.getByRole('img', { name: /Product mix: Bags, 5; Shoes, 4; Accessories, 4/ })).toBeInTheDocument()
-    const table = screen.getByRole('table', { name: /Product prices, categories/ })
-    expect(within(table).getAllByRole('row')).toHaveLength(16)
-    await user.click(within(table).getByRole('button', { name: 'Silver Watch' }))
-    expect(screen.getByRole('dialog', { name: 'Silver Watch' })).toBeInTheDocument()
-  })
-
-  it('validates registration as a local demo without making an account request', async () => {
-    const { user } = await start()
-    const form = screen.getByRole('form', { name: 'Join the ShopBoard community' })
+  it('validates checkout, focuses the first invalid field, and completes without sending personal information', async () => {
+    localStorage.setItem('shopboard-cart-v1', JSON.stringify({ '1::Brown': 1 }))
+    window.history.replaceState(null, '', '/checkout')
+    const user = userEvent.setup()
+    renderApp()
+    const form = await screen.findByRole('form', { name: 'Checkout' })
+    await user.click(
+      within(form).getByRole('button', { name: 'Complete demo checkout' }),
+    )
+    expect(
+      await screen.findByText('Enter your full name (at least 2 characters).'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Full name')).toHaveFocus()
+    expect(screen.getByLabelText('Full name')).toHaveAttribute(
+      'aria-describedby',
+      'name-error',
+    )
+    for (const [label, value] of [
+      ['Full name', 'Test Buyer'],
+      ['Email', 'test@example.com'],
+      ['Street address', '123 Sample Street'],
+      ['City', 'Istanbul'],
+      ['Postal code', '34000'],
+      ['Country', 'Türkiye'],
+    ])
+      await user.type(screen.getByLabelText(label), value)
     const requests = vi.mocked(fetch).mock.calls.length
-    await user.click(within(form).getByRole('button', { name: 'Create account' }))
-    expect(within(form).getByRole('status')).toHaveTextContent('Demo form')
-    await user.type(within(form).getByLabelText('Full name'), 'Test Visitor')
-    await user.type(within(form).getByLabelText('Email address'), 'test@example.com')
-    await user.type(within(form).getByLabelText('Password'), 'sample-password')
-    await user.click(within(form).getByRole('button', { name: 'Create account' }))
-    expect(within(form).getByRole('status')).toHaveTextContent('Your details passed validation')
-    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(requests)
-    expect(localStorage.getItem('shopboard-cart-v1')).not.toContain('sample-password')
+    await user.click(
+      within(form).getByRole('button', { name: 'Complete demo checkout' }),
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'Demo checkout complete' }),
+    ).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledTimes(requests)
+    expect(localStorage.getItem('shopboard-cart-v1')).not.toContain(
+      'Sample Street',
+    )
   })
+  it('handles empty catalogs distinctly from no matches', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockResolvedValue(Response.json([])),
+    )
+    renderApp()
+    expect(
+      await screen.findByRole('heading', { name: 'No products yet' }),
+    ).toBeInTheDocument()
+  })
+  it('recovers from a catalog failure without overwriting saved carts', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    localStorage.setItem('shopboard-cart-v1', '{"1::Brown":2}')
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn<typeof fetch>()
+        .mockRejectedValueOnce(new Error('Offline'))
+        .mockImplementation(async (input) => {
+          if (
+            String(input).includes('/products/1.json') &&
+            Array.isArray(catalog)
+          )
+            return Response.json(
+              catalog.find(
+                (item: unknown) =>
+                  typeof item === 'object' &&
+                  item !== null &&
+                  'id' in item &&
+                  item.id === 1,
+              ),
+            )
+          return Response.json(catalog)
+        }),
+    )
+    const user = userEvent.setup()
+    renderApp()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This section could not load',
+    )
+    expect(localStorage.getItem('shopboard-cart-v1')).toBe('{"1::Brown":2}')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(
+      await screen.findByRole('article', { name: 'Everyday Tote' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cart 2' })).toBeInTheDocument()
+    spy.mockRestore()
+  })
+})
+
+it('retries a failed individual product request within the shared shell', async () => {
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  let attempts = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (String(input).includes('/products/1.json')) {
+        attempts += 1
+        if (attempts === 1) return new Response('', { status: 503 })
+        return Response.json({
+          id: 1,
+          name: 'Leather Tote Bag',
+          category: 'Bags',
+          price: 89,
+        })
+      }
+      return Response.json(catalog)
+    }),
+  )
+  window.history.replaceState(null, '', '/products/1')
+  const user = userEvent.setup()
+  renderApp()
+  expect(await screen.findByRole('alert')).toBeInTheDocument()
+  expect(
+    screen.getByRole('navigation', { name: 'Main navigation' }),
+  ).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Try again' }))
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Leather Tote Bag' }),
+  ).toBeInTheDocument()
+  expect(attempts).toBe(2)
+  spy.mockRestore()
 })
